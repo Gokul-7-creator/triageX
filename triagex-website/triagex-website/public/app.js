@@ -374,8 +374,17 @@ function landingView() {
         <a href="#/login" class="btn btn-secondary btn-sm">Sign in</a>
       </div>
     </div>
-    <div class="landing-hero">
-      <div>
+    <div class="landing-hero hero-tilt-wrap" id="heroTiltWrap">
+      <div class="hero-bg-3d" aria-hidden="true">
+        <span class="orb orb1"></span>
+        <span class="orb orb2"></span>
+        <span class="orb orb3"></span>
+        <span class="orb orb4"></span>
+        <svg class="hero-pulse-line" viewBox="0 0 400 60" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0 30 H130 L150 8 L170 52 L190 18 L205 30 H400" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="hero-copy">
         <div class="hero-eyebrow">AI-assisted clinical decision support</div>
         <h1 class="hero-title">Emergency triage that <span class="accent-word">explains itself</span>, in real time.</h1>
         <p class="hero-sub">${esc(t('tagline'))} TRIAGE-X ranks incoming patients by symptoms, vitals and history, then keeps the hospital queue in sync as reassessments come in.</p>
@@ -385,7 +394,7 @@ function landingView() {
         </div>
         <div class="hero-note">Sign-in required (nurse / doctor / admin) — demo credentials are on the login screen so you can explore every role immediately.</div>
       </div>
-      <div class="hero-panel">
+      <div class="hero-panel hero-panel-3d" id="heroPanel">
         <div class="hero-panel-head">
           <span class="hero-panel-title">Live Emergency Queue</span>
           <span class="live-pill"><span class="live-dot"></span>Example</span>
@@ -398,18 +407,22 @@ function landingView() {
             <span class="mono" style="font-weight:700;">${q.score}</span>
           </div>`).join('')}
       </div>
+      <button type="button" class="scroll-cue" id="scrollCue" aria-label="Scroll to see how TRIAGE-X works">
+        <span class="scroll-cue-mouse"><span class="scroll-cue-wheel"></span></span>
+        <span class="scroll-cue-text">Scroll to explore</span>
+      </button>
     </div>
 
-    <div class="flow-section">
+    <div class="flow-section" id="flowSection">
       <h2 class="flow-title">How a case moves through TRIAGE-X</h2>
       <p class="flow-sub">One continuous path from the check-in desk to a clinician's decision — the queue reorders itself at every step.</p>
       <div class="flow-steps">
-        ${flow.map((f, i) => `${i > 0 ? '<div class="flow-arrow">→</div>' : ''}<div class="flow-step"><div class="flow-step-num">STEP ${i + 1}</div><div class="flow-step-label">${esc(f)}</div></div>`).join('')}
+        ${flow.map((f, i) => `${i > 0 ? '<div class="flow-arrow">→</div>' : ''}<div class="flow-step reveal" style="transition-delay:${i * 70}ms"><div class="flow-step-num">STEP ${i + 1}</div><div class="flow-step-label">${esc(f)}</div></div>`).join('')}
       </div>
     </div>
 
     <div class="feature-grid">
-      ${features.map(f => `<div class="feature-card"><div class="feature-icon">${f.icon}</div><div class="feature-title">${esc(f.title)}</div><div class="feature-body">${esc(f.body)}</div></div>`).join('')}
+      ${features.map((f, i) => `<div class="feature-card reveal" style="transition-delay:${i * 90}ms"><div class="feature-icon">${f.icon}</div><div class="feature-title">${esc(f.title)}</div><div class="feature-body">${esc(f.body)}</div></div>`).join('')}
     </div>
 
     <div class="disclaimer-band">
@@ -423,7 +436,64 @@ function landingView() {
     </div>
   </div>`;
 }
-function wireLandingView() {}
+function wireLandingView() {
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // --- 3D mouse-parallax tilt on the hero panel + floating background orbs ---
+  const tiltWrap = document.getElementById('heroTiltWrap');
+  const panel = document.getElementById('heroPanel');
+  if (tiltWrap && panel && !reduceMotion) {
+    const orbs = tiltWrap.querySelectorAll('.orb');
+    let raf = null;
+    const onMove = (e) => {
+      const rect = tiltWrap.getBoundingClientRect();
+      const px = (e.clientX - rect.left) / rect.width - 0.5;
+      const py = (e.clientY - rect.top) / rect.height - 0.5;
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        panel.style.transform = `perspective(900px) rotateY(${px * 12}deg) rotateX(${-py * 12}deg) translateZ(12px)`;
+        orbs.forEach((orb, i) => {
+          const depth = (i + 1) * 10;
+          orb.style.transform = `translate3d(${px * depth}px, ${py * depth}px, 0)`;
+        });
+      });
+    };
+    const onLeave = () => {
+      if (raf) cancelAnimationFrame(raf);
+      panel.style.transform = '';
+      orbs.forEach(orb => { orb.style.transform = ''; });
+    };
+    tiltWrap.addEventListener('mousemove', onMove);
+    tiltWrap.addEventListener('mouseleave', onLeave);
+  }
+
+  // --- Scroll-cue: click/keyboard scrolls to the "How it works" section ---
+  const scrollCue = document.getElementById('scrollCue');
+  const flowSection = document.getElementById('flowSection');
+  if (scrollCue && flowSection) {
+    scrollCue.addEventListener('click', () => {
+      flowSection.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+    });
+  }
+
+  // --- Reveal-on-scroll for the flow steps and feature cards ---
+  const revealEls = document.querySelectorAll('.landing .reveal');
+  if (revealEls.length) {
+    if (!reduceMotion && 'IntersectionObserver' in window) {
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('reveal-in');
+            io.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.15 });
+      revealEls.forEach(el => io.observe(el));
+    } else {
+      revealEls.forEach(el => el.classList.add('reveal-in'));
+    }
+  }
+}
 
 /* =====================================================================
    LOGIN
