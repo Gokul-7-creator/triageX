@@ -376,23 +376,25 @@ function landingView() {
     </div>
     <div class="landing-hero hero-tilt-wrap" id="heroTiltWrap">
       <div class="hero-bg-3d" aria-hidden="true">
+        <div class="hero-mesh"></div>
+        <div class="hero-grid"></div>
         <span class="orb orb1"></span>
         <span class="orb orb2"></span>
         <span class="orb orb3"></span>
         <span class="orb orb4"></span>
         <svg class="hero-pulse-line" viewBox="0 0 400 60" preserveAspectRatio="none" aria-hidden="true">
-          <path d="M0 30 H130 L150 8 L170 52 L190 18 L205 30 H400" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M0 30 H130 L150 8 L170 52 L190 18 L205 30 H400" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </div>
       <div class="hero-copy">
         <div class="hero-eyebrow">AI-assisted clinical decision support</div>
         <h1 class="hero-title">Emergency triage that <span class="accent-word">explains itself</span>, in real time.</h1>
-        <p class="hero-sub">${esc(t('tagline'))} TRIAGE-X ranks incoming patients by symptoms, vitals and history, then keeps the hospital queue in sync as reassessments come in.</p>
+        <p class="hero-sub">${esc(t('tagline'))}</p>
         <div class="hero-actions">
           <a href="#/checkin" class="btn btn-primary">${esc(t('cta_checkin'))}</a>
           <a href="#/dashboard" class="btn btn-secondary">${esc(t('cta_dashboard'))}</a>
         </div>
-        <div class="hero-note">Sign-in required (nurse / doctor / admin) — demo credentials are on the login screen so you can explore every role immediately.</div>
+        <div class="hero-note">Demo credentials are on the sign-in screen.</div>
       </div>
       <div class="hero-panel hero-panel-3d" id="heroPanel">
         <div class="hero-panel-head">
