@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TRIAGE-X</title>
+<meta name="description" content="AI-Powered Healthcare Triage & Smart Hospital Queue, with a real OpenAI-backed LLM + RAG AI Case Assistant.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="app" class="app-root">
+  <div class="boot-screen" id="bootScreen">
+    <div class="boot-mark">
+      <svg width="46" height="46" viewBox="0 0 46 46" fill="none" aria-hidden="true">
+        <path d="M4 23h9l4-14 8 28 4-14h13" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="boot-label">TRIAGE-X</div>
+    <div class="boot-sub">Initializing triage workspace&hellip;</div>
+  </div>
+</div>
+
+<div id="toastRoot" class="toast-root" aria-live="polite"></div>
+<div id="modalRoot"></div>
+
+<script type="module" src="i18n.js"></script>
+<script type="module" src="triage.js"></script>
+<script type="module" src="store.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>
