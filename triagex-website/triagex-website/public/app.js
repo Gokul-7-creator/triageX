@@ -1715,3 +1715,15 @@ function modelEvalHtml(ev) {
    Global delegated: close open notif panel on route change
    ===================================================================== */
 window.addEventListener('hashchange', () => { const w = document.getElementById('notifPanelWrap'); if (w) w.innerHTML = ''; });
+
+/* =====================================================================
+   TRIAGE-X UI motion enhancement — presentation only
+   ===================================================================== */
+document.addEventListener('pointermove', (event) => {
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const card = event.target.closest?.('.feature-card, .flow-step');
+  if (!card) return;
+  const rect = card.getBoundingClientRect();
+  card.style.setProperty('--mx', `${event.clientX - rect.left}px`);
+  card.style.setProperty('--my', `${event.clientY - rect.top}px`);
+}, { passive: true });
