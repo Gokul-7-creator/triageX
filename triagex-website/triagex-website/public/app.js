@@ -29,6 +29,41 @@ function minutesSince(iso) {
   if (!iso) return 0;
   return Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
 }
+// =====================================================================
+// WAIT-TIME SAFETY / REASSESSMENT
+// Prototype setting only — not a clinically validated interval.
+// =====================================================================
+
+const NORMAL_REASSESSMENT_MINUTES = 30;
+
+function needsWaitingReassessment(c) {
+  if (!c) return false;
+
+  // Only NORMAL patients who are still waiting
+  if (c.triage?.priority !== 'NORMAL') return false;
+  if (c.status !== 'waiting') return false;
+
+  // After reassessment, start the next 30-minute timer from that time.
+  // Otherwise use the original arrival time.
+  const lastAssessment =
+    c.lastAssessmentTime ||
+    c.arrivalTime;
+
+  return minutesSince(lastAssessment) >= NORMAL_REASSESSMENT_MINUTES;
+}
+
+function reassessmentTimeRemaining(c) {
+  const lastAssessment =
+    c.lastAssessmentTime ||
+    c.arrivalTime;
+
+  const elapsed = minutesSince(lastAssessment);
+
+  return Math.max(
+    0,
+    NORMAL_REASSESSMENT_MINUTES - elapsed
+  );
+}
 function initials(name) {
   return (name || '?').split(' ').filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
 }
@@ -799,7 +834,10 @@ async function submitCheckin() {
       vitals: Object.fromEntries(Object.entries(ck.vitals).map(([k, v]) => [k, v === '' ? null : Number(v)])),
       history: [...ck.history], historyNotes: ck.historyNotes,
       triage: result,
-      status: 'waiting', arrivalTime: now, lastUpdated: now,
+      status: 'waiting', 
+      arrivalTime: now,
+      lastUpdated: now,
+      lastAssessmentTime: now,
       timeline: [
         { time: now, event: 'Patient registered' },
         { time: now, event: 'Vitals recorded' },
