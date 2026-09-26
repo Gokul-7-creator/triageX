@@ -7,6 +7,9 @@ import {
 } from './triage.js';
 import { store, DEMO_USERS } from './store.js';
 
+// Patient portal demo account (read-only queue count).
+const PATIENT_DEMO_USER = { name: 'Patient Demo', email: 'patient@triagex.demo', password: 'demo1234', role: 'patient' };
+
 /* =====================================================================
    Small helpers
    ===================================================================== */
@@ -162,8 +165,9 @@ const ROUTE_ROLES = {
   admin: ['admin'],
   patient: ['doctor', 'admin'],
   queue: ['nurse', 'doctor', 'admin'],
+  patientqueue: ['patient'],
 };
-const CASES_DEPENDENT_ROUTES = new Set(['dashboard', 'patient', 'analytics', 'admin', 'queue']);
+const CASES_DEPENDENT_ROUTES = new Set(['dashboard', 'patient', 'analytics', 'admin', 'queue', 'patientqueue']);
 
 function render() {
   const root = document.getElementById('app');
@@ -186,12 +190,14 @@ function render() {
     case 'analytics': root.innerHTML = shellWrap('<div id="analyticsRoot"></div>', 'analytics'); renderAnalytics(); break;
     case 'admin': root.innerHTML = shellWrap('<div id="adminRoot"></div>', 'admin'); renderAdmin(); break;
     case 'queue': root.innerHTML = shellWrap(queueStatusView(), 'queue'); wireShellChrome(); break;
+    case 'patientqueue': root.innerHTML = shellWrap(patientQueueView(), 'patientqueue'); wireShellChrome(); break;
     default: root.innerHTML = landingView(); wireLandingView();
   }
   window.scrollTo(0, 0);
 }
 function homeRouteFor(role) {
   if (role === 'nurse') return '#/checkin';
+  if (role === 'patient') return '#/patientqueue';
   return '#/dashboard';
 }
 window.addEventListener('hashchange', render);
@@ -225,6 +231,7 @@ function onCasesSnapshot(list) {
   else if (route.name === 'analytics') renderAnalytics();
   else if (route.name === 'admin') renderAdmin();
   else if (route.name === 'queue') { const r = document.getElementById('app'); if (r) { r.innerHTML = shellWrap(queueStatusView(), 'queue'); wireShellChrome(); } }
+  else if (route.name === 'patientqueue') { const r = document.getElementById('app'); if (r) { r.innerHTML = shellWrap(patientQueueView(), 'patientqueue'); wireShellChrome(); } }
   else if (route.name === 'patient' && route.param) wirePatientDetailsRefresh(route.param);
 }
 function fireCriticalAlert(c, isEscalation) {
@@ -275,6 +282,7 @@ function navIcon(name) {
     analytics: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M4 20V10M12 20V4M20 20v-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
     admin: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.4" stroke="currentColor" stroke-width="1.8"/><path d="M4.5 20c1.4-3.7 4.2-5.6 7.5-5.6s6.1 1.9 7.5 5.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
     queue: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+    patientqueue: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M7 8h10M7 12h10M7 16h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.8"/></svg>',
   };
   return icons[name] || '';
 }
@@ -285,6 +293,7 @@ function shellWrap(innerHtml, activeRoute) {
   if (role === 'doctor' || role === 'admin') links.push({ r: 'dashboard', label: t('nav_dashboard'), icon: 'dashboard' });
   if (role === 'nurse' || role === 'admin') links.push({ r: 'checkin', label: t('nav_checkin'), icon: 'checkin' });
   if (role === 'nurse') links.push({ r: 'queue', label: 'Queue Status', icon: 'queue' });
+  if (role === 'patient') links.push({ r: 'patientqueue', label: 'My Queue', icon: 'patientqueue' });
   if (role === 'doctor' || role === 'admin' || role === 'nurse') links.push({ r: 'analytics', label: t('nav_analytics'), icon: 'analytics' });
   if (role === 'admin') links.push({ r: 'admin', label: t('nav_admin'), icon: 'admin' });
 
@@ -320,13 +329,13 @@ function shellWrap(innerHtml, activeRoute) {
             <button data-lang="en" class="${getLang() === 'en' ? 'active' : ''}">EN</button>
             <button data-lang="ta" class="${getLang() === 'ta' ? 'active' : ''}">TA</button>
           </div>
-          <div style="position:relative;">
+          ${role === 'patient' ? '' : `<div style="position:relative;">
             <button class="icon-btn" id="notifBellBtn" aria-label="Notifications">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M6 9a6 6 0 1112 0c0 5 2 6 2 6H4s2-1 2-6z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9.5 19a2.5 2.5 0 005 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               <span class="notif-badge" id="notifBadgeCount" ${unread === 0 ? 'hidden' : ''}>${unread}</span>
             </button>
             <div id="notifPanelWrap"></div>
-          </div>
+          </div>`}
         </div>
       </header>
       <main class="main">${innerHtml}</main>
@@ -339,7 +348,7 @@ function storeModeNote() {
     : 'Local-only demo mode — this view is not receiving multi-viewer live sync';
 }
 function topbarTitle(route) {
-  const titles = { dashboard: t('nav_dashboard'), checkin: t('nav_checkin'), analytics: t('nav_analytics'), admin: t('nav_admin'), queue: 'Queue Status', patient: 'Patient Details' };
+  const titles = { dashboard: t('nav_dashboard'), checkin: t('nav_checkin'), analytics: t('nav_analytics'), admin: t('nav_admin'), queue: 'Queue Status', patient: 'Patient Details', patientqueue: 'My Queue' };
   return esc(titles[route] || 'TRIAGE-X');
 }
 function wireShellChrome() {
@@ -542,7 +551,7 @@ function loginView() {
       <a href="#/" class="auth-back">← Back to TRIAGE-X</a>
       <div class="auth-mark"><span class="brand-mark" style="color:var(--accent);">${brandMark(24)}</span><span style="font-family:var(--font-display);font-weight:800;font-size:17px;">TRIAGE-X</span></div>
       <div class="auth-title">Sign in to your workspace</div>
-      <div class="auth-sub">Role-based access for nurses, doctors and administrators.</div>
+      <div class="auth-sub">Role-based access for nurses, doctors, administrators and patients.</div>
       <svg class="ecg-line" viewBox="0 0 300 34" preserveAspectRatio="none" aria-hidden="true"><path d="M0 17 H70 L82 4 L94 30 L106 17 H140 L150 8 L160 26 L170 17 H300" fill="none" stroke="currentColor" stroke-width="2"/></svg>
       <div id="loginError"></div>
       <form id="loginForm">
@@ -554,6 +563,7 @@ function loginView() {
             <div class="role-opt active" data-role="nurse">Nurse</div>
             <div class="role-opt" data-role="doctor">Doctor</div>
             <div class="role-opt" data-role="admin">Admin</div>
+            <div class="role-opt" data-role="patient">Patient</div>
           </div>
         </div>
         <button class="btn btn-primary btn-block" type="submit">Log in</button>
@@ -561,7 +571,7 @@ function loginView() {
       <div class="auth-demo-box">
         <strong style="color:var(--text-primary);">Demo accounts</strong> — click a row to autofill.
         <table>
-          ${DEMO_USERS.map(u => `<tr class="demo-row" data-email="${esc(u.email)}" data-role="${u.role}" data-pass="${esc(u.password)}" style="cursor:pointer;"><td>${esc(u.role)}</td><td>${esc(u.email)}</td><td>${esc(u.password)}</td></tr>`).join('')}
+          ${[...DEMO_USERS, PATIENT_DEMO_USER].map(u => `<tr class="demo-row" data-email="${esc(u.email)}" data-role="${u.role}" data-pass="${esc(u.password)}" style="cursor:pointer;"><td>${esc(u.role)}</td><td>${esc(u.email)}</td><td>${esc(u.password)}</td></tr>`).join('')}
         </table>
       </div>
     </div>
@@ -590,8 +600,13 @@ function wireLoginView() {
     const password = document.getElementById('loginPassword').value;
     const errBox = document.getElementById('loginError');
     errBox.innerHTML = '';
-    const user = await store.findUser(email);
-    if (!user || user.passwordDemo !== password || user.role !== selectedRole) {
+    let user;
+    if (selectedRole === 'patient' && email.toLowerCase() === PATIENT_DEMO_USER.email && password === PATIENT_DEMO_USER.password) {
+      user = { name: PATIENT_DEMO_USER.name, email: PATIENT_DEMO_USER.email, role: 'patient' };
+    } else {
+      user = await store.findUser(email);
+    }
+    if (!user || (selectedRole !== 'patient' && user.passwordDemo !== password) || user.role !== selectedRole) {
       errBox.innerHTML = `<div class="auth-error">Invalid email, password or role for this account.</div>`;
       return;
     }
@@ -837,7 +852,7 @@ async function submitCheckin() {
       status: 'waiting', 
       arrivalTime: now,
       lastUpdated: now,
-      lastAssessmentTime: now,
+      lastAssessmenttime: now,
       timeline: [
         { time: now, event: 'Patient registered' },
         { time: now, event: 'Vitals recorded' },
@@ -1145,6 +1160,45 @@ async function createCaseFromTemplate(tpl) {
 }
 let _demoBump = 0;
 function demoCounterBump() { return _demoBump++; }
+
+/* =====================================================================
+   PATIENT PORTAL — privacy-preserving queue count only
+   ===================================================================== */
+function patientQueueView() {
+  // Count patients who are still actively in the hospital workflow.
+  // Completed cases are excluded. No names, vitals, symptoms, risk scores,
+  // priorities or other patient details are exposed to the patient role.
+  const remaining = state.cases.filter(c => c.status !== 'completed').length;
+  const waiting = state.cases.filter(c => c.status === 'waiting' || c.status === 'reassessment_required' || c.status === 'called').length;
+  const inTreatment = state.cases.filter(c => c.status === 'in_consultation' || c.status === 'emergency').length;
+  const now = new Date();
+  return `
+    <div style="max-width:760px;margin:0 auto;">
+      <div class="section-head" style="margin-bottom:18px;">
+        <div>
+          <div class="section-title" style="font-size:24px;">Patient Queue Status</div>
+          <div class="section-note">A privacy-safe view of the current hospital queue.</div>
+        </div>
+        <span class="live-pill"><span class="live-dot"></span>LIVE</span>
+      </div>
+
+      <div class="card card-pad" style="text-align:center;padding:34px 24px;margin-bottom:18px;">
+        <div class="section-note" style="font-size:14px;margin-bottom:8px;">PATIENTS STILL IN THE ACTIVE QUEUE</div>
+        <div class="mono" style="font-size:64px;line-height:1;font-weight:800;margin:10px 0 14px;">${remaining}</div>
+        <div style="font-size:16px;font-weight:700;">${remaining === 1 ? 'patient is' : 'patients are'} currently still in the hospital queue.</div>
+        <div class="section-note" style="margin-top:10px;">You can use this count to understand the current queue load before planning your visit.</div>
+      </div>
+
+      <div class="stat-grid" style="grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:18px;">
+        <div class="stat-tile"><div class="stat-tile-label">Waiting</div><div class="stat-tile-value">${waiting}</div></div>
+        <div class="stat-tile"><div class="stat-tile-label">Being attended</div><div class="stat-tile-value">${inTreatment}</div></div>
+      </div>
+
+      <div class="banner"><span>🔒</span><div><strong>Privacy protected.</strong> This patient view does not display other patients' names, symptoms, vitals, medical history, risk scores or priority levels.</div></div>
+      <div class="section-note" style="text-align:center;margin-top:14px;">Last updated: ${esc(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))}</div>
+      ${state.storeMode === 'db' ? '' : `<div class="banner warn" style="margin-top:16px;"><span>⚠️</span><div>This deployment is currently using local-only storage. Cross-device patient updates require a shared backend/database.</div></div>`}
+    </div>`;
+}
 
 /* =====================================================================
    QUEUE STATUS (nurse read-only)
