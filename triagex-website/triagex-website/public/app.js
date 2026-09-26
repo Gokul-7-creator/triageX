@@ -32,6 +32,45 @@ function minutesSince(iso) {
   if (!iso) return 0;
   return Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
 }
+// ============================================================
+// PATIENT WAIT-TIME ESTIMATION
+// Prototype estimate — not a guaranteed clinical waiting time.
+// ============================================================
+
+const AVG_CONSULTATION_MINUTES = 7;
+
+function getPatientQueueStats() {
+  const activeCases = state.cases.filter(c =>
+    c.status !== 'completed'
+  );
+
+  const waitingCases = activeCases.filter(c =>
+    c.status === 'waiting' ||
+    c.status === 'reassessment_required' ||
+    c.status === 'called'
+  );
+
+  const beingAttended = activeCases.filter(c =>
+    c.status === 'in_consultation' ||
+    c.status === 'emergency'
+  );
+
+  // Simple prototype estimation
+  const baseEstimate =
+    waitingCases.length * AVG_CONSULTATION_MINUTES;
+
+  // Show a range instead of an exact time
+  const minWait = Math.max(0, baseEstimate - 5);
+  const maxWait = baseEstimate + 5;
+
+  return {
+    totalActive: activeCases.length,
+    waiting: waitingCases.length,
+    beingAttended: beingAttended.length,
+    minWait,
+    maxWait
+  };
+}
 // =====================================================================
 // WAIT-TIME SAFETY / REASSESSMENT
 // Prototype setting only — not a clinically validated interval.
@@ -1165,41 +1204,142 @@ function demoCounterBump() { return _demoBump++; }
    PATIENT PORTAL — privacy-preserving queue count only
    ===================================================================== */
 function patientQueueView() {
-  // Count patients who are still actively in the hospital workflow.
-  // Completed cases are excluded. No names, vitals, symptoms, risk scores,
-  // priorities or other patient details are exposed to the patient role.
-  const remaining = state.cases.filter(c => c.status !== 'completed').length;
-  const waiting = state.cases.filter(c => c.status === 'waiting' || c.status === 'reassessment_required' || c.status === 'called').length;
-  const inTreatment = state.cases.filter(c => c.status === 'in_consultation' || c.status === 'emergency').length;
-  const now = new Date();
+
+  const stats = getPatientQueueStats();
+
+  const waitText =
+    stats.waiting === 0
+      ? 'No current wait'
+      : `${stats.minWait}–${stats.maxWait} min`;
+
   return `
-    <div style="max-width:760px;margin:0 auto;">
-      <div class="section-head" style="margin-bottom:18px;">
-        <div>
-          <div class="section-title" style="font-size:24px;">Patient Queue Status</div>
-          <div class="section-note">A privacy-safe view of the current hospital queue.</div>
+    <div class="page-head">
+      <div>
+        <h1>My Queue</h1>
+        <p class="page-sub">
+          Live hospital queue information
+        </p>
+      </div>
+    </div>
+
+    <div class="stat-grid">
+
+      <div class="stat-card">
+        <div class="stat-label">
+          Patients Still in Queue
         </div>
-        <span class="live-pill"><span class="live-dot"></span>LIVE</span>
+
+        <div class="stat-value">
+          ${stats.totalActive}
+        </div>
+
+        <div class="stat-note">
+          Currently active
+        </div>
       </div>
 
-      <div class="card card-pad" style="text-align:center;padding:34px 24px;margin-bottom:18px;">
-        <div class="section-note" style="font-size:14px;margin-bottom:8px;">PATIENTS STILL IN THE ACTIVE QUEUE</div>
-        <div class="mono" style="font-size:64px;line-height:1;font-weight:800;margin:10px 0 14px;">${remaining}</div>
-        <div style="font-size:16px;font-weight:700;">${remaining === 1 ? 'patient is' : 'patients are'} currently still in the hospital queue.</div>
-        <div class="section-note" style="margin-top:10px;">You can use this count to understand the current queue load before planning your visit.</div>
+
+      <div class="stat-card">
+        <div class="stat-label">
+          Approx. Waiting Time
+        </div>
+
+        <div class="stat-value">
+          ${waitText}
+        </div>
+
+        <div class="stat-note">
+          Estimated, not guaranteed
+        </div>
       </div>
 
-      <div class="stat-grid" style="grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:18px;">
-        <div class="stat-tile"><div class="stat-tile-label">Waiting</div><div class="stat-tile-value">${waiting}</div></div>
-        <div class="stat-tile"><div class="stat-tile-label">Being attended</div><div class="stat-tile-value">${inTreatment}</div></div>
+
+      <div class="stat-card">
+        <div class="stat-label">
+          Waiting
+        </div>
+
+        <div class="stat-value">
+          ${stats.waiting}
+        </div>
+
+        <div class="stat-note">
+          Patients awaiting care
+        </div>
       </div>
 
-      <div class="banner"><span>🔒</span><div><strong>Privacy protected.</strong> This patient view does not display other patients' names, symptoms, vitals, medical history, risk scores or priority levels.</div></div>
-      <div class="section-note" style="text-align:center;margin-top:14px;">Last updated: ${esc(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))}</div>
-      ${state.storeMode === 'db' ? '' : `<div class="banner warn" style="margin-top:16px;"><span>⚠️</span><div>This deployment is currently using local-only storage. Cross-device patient updates require a shared backend/database.</div></div>`}
-    </div>`;
+
+      <div class="stat-card">
+        <div class="stat-label">
+          Being Attended
+        </div>
+
+        <div class="stat-value">
+          ${stats.beingAttended}
+        </div>
+
+        <div class="stat-note">
+          Currently receiving care
+        </div>
+      </div>
+
+    </div>
+
+
+    <div class="card card-pad" style="margin-top:20px;">
+
+      <div class="section-title">
+        Your Queue Information
+      </div>
+
+      <p style="margin-top:12px;">
+        The approximate waiting time is calculated from the
+        current hospital queue and an average consultation time.
+      </p>
+
+      <div
+        style="
+          margin-top:16px;
+          padding:14px;
+          border-radius:10px;
+          background:rgba(255,193,7,0.08);
+        "
+      >
+        ⚠️ <strong>Waiting time is an estimate.</strong>
+        Emergency or higher-priority patients may be attended
+        before other patients, so the estimated time can change.
+      </div>
+
+    </div>
+
+
+    <div class="card card-pad" style="margin-top:16px;">
+
+      <div class="section-title">
+        🔒 Privacy Protected
+      </div>
+
+      <p style="margin-top:12px;">
+        Only anonymous queue information is displayed here.
+        Other patients' names, symptoms, vital signs,
+        medical history and triage scores are not shown.
+      </p>
+
+    </div>
+
+
+    <div
+      class="section-note"
+      style="margin-top:14px;"
+    >
+      Last updated:
+      ${new Date().toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit'
+      })}
+    </div>
+  `;
 }
-
 /* =====================================================================
    QUEUE STATUS (nurse read-only)
    ===================================================================== */
