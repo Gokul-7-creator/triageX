@@ -1204,139 +1204,165 @@ function demoCounterBump() { return _demoBump++; }
    PATIENT PORTAL — privacy-preserving queue count only
    ===================================================================== */
 function patientQueueView() {
-
   const stats = getPatientQueueStats();
 
   const waitText =
     stats.waiting === 0
-      ? 'No current wait'
+      ? 'No wait'
       : `${stats.minWait}–${stats.maxWait} min`;
 
   return `
-    <div class="page-head">
-      <div>
-        <h1>My Queue</h1>
-        <p class="page-sub">
-          Live hospital queue information
-        </p>
-      </div>
-    </div>
+    <div class="patient-dashboard">
 
-    <div class="stat-grid">
-
-      <div class="stat-card">
-        <div class="stat-label">
-          Patients Still in Queue
+      <div class="patient-welcome">
+        <div>
+          <div class="patient-eyebrow">PATIENT QUEUE</div>
+          <h1>My Queue</h1>
+          <p>
+            Plan your visit with the latest hospital queue estimate.
+          </p>
         </div>
 
-        <div class="stat-value">
-          ${stats.totalActive}
-        </div>
-
-        <div class="stat-note">
-          Currently active
+        <div class="patient-live">
+          <span class="patient-live-dot"></span>
+          LIVE
         </div>
       </div>
 
 
-      <div class="stat-card">
-        <div class="stat-label">
-          Approx. Waiting Time
+      <div class="patient-stat-grid">
+
+        <div class="patient-stat-card">
+          <div class="patient-stat-top">
+            <span class="patient-stat-icon">👥</span>
+            <span class="patient-stat-label">
+              Patients in Queue
+            </span>
+          </div>
+
+          <div class="patient-stat-number">
+            ${stats.totalActive}
+          </div>
+
+          <div class="patient-stat-description">
+            Currently in the active queue
+          </div>
         </div>
 
-        <div class="stat-value">
-          ${waitText}
+
+        <div class="patient-stat-card patient-wait-card">
+          <div class="patient-stat-top">
+            <span class="patient-stat-icon">◷</span>
+            <span class="patient-stat-label">
+              Estimated Wait
+            </span>
+          </div>
+
+          <div class="patient-stat-number patient-wait-time">
+            ${waitText}
+          </div>
+
+          <div class="patient-stat-description">
+            Approximate waiting time
+          </div>
         </div>
 
-        <div class="stat-note">
-          Estimated, not guaranteed
+
+        <div class="patient-stat-card">
+          <div class="patient-stat-top">
+            <span class="patient-stat-icon">⌛</span>
+            <span class="patient-stat-label">
+              Waiting
+            </span>
+          </div>
+
+          <div class="patient-stat-number">
+            ${stats.waiting}
+          </div>
+
+          <div class="patient-stat-description">
+            Patients awaiting care
+          </div>
         </div>
+
+
+        <div class="patient-stat-card">
+          <div class="patient-stat-top">
+            <span class="patient-stat-icon">✚</span>
+            <span class="patient-stat-label">
+              Being Attended
+            </span>
+          </div>
+
+          <div class="patient-stat-number">
+            ${stats.beingAttended}
+          </div>
+
+          <div class="patient-stat-description">
+            Currently receiving care
+          </div>
+        </div>
+
       </div>
 
 
-      <div class="stat-card">
-        <div class="stat-label">
-          Waiting
+      <div class="patient-notice">
+
+        <div class="patient-notice-icon">
+          !
         </div>
 
-        <div class="stat-value">
-          ${stats.waiting}
+        <div>
+          <div class="patient-notice-title">
+            Waiting time may change
+          </div>
+
+          <div class="patient-notice-text">
+            Emergency and higher-priority patients may be
+            attended first. Your displayed waiting time is
+            an estimate, not a guaranteed appointment time.
+          </div>
         </div>
 
-        <div class="stat-note">
-          Patients awaiting care
-        </div>
       </div>
 
 
-      <div class="stat-card">
-        <div class="stat-label">
-          Being Attended
+      <div class="patient-privacy">
+
+        <div class="patient-privacy-icon">
+          🔒
         </div>
 
-        <div class="stat-value">
-          ${stats.beingAttended}
+        <div class="patient-privacy-content">
+          <div class="patient-privacy-title">
+            Your privacy is protected
+          </div>
+
+          <div class="patient-privacy-text">
+            This dashboard displays only anonymous queue
+            information. Other patients' names, symptoms,
+            vital signs, medical history and triage scores
+            are never displayed here.
+          </div>
         </div>
 
-        <div class="stat-note">
-          Currently receiving care
+        <div class="patient-private-badge">
+          PRIVATE
         </div>
+
       </div>
 
-    </div>
 
+      <div class="patient-update-time">
+        <span class="patient-update-dot"></span>
 
-    <div class="card card-pad" style="margin-top:20px;">
-
-      <div class="section-title">
-        Your Queue Information
+        Updated
+        ${new Date().toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit'
+        })}
       </div>
 
-      <p style="margin-top:12px;">
-        The approximate waiting time is calculated from the
-        current hospital queue and an average consultation time.
-      </p>
-
-      <div
-        style="
-          margin-top:16px;
-          padding:14px;
-          border-radius:10px;
-          background:rgba(255,193,7,0.08);
-        "
-      >
-        ⚠️ <strong>Waiting time is an estimate.</strong>
-        Emergency or higher-priority patients may be attended
-        before other patients, so the estimated time can change.
-      </div>
-
-    </div>
-
-
-    <div class="card card-pad" style="margin-top:16px;">
-
-      <div class="section-title">
-        🔒 Privacy Protected
-      </div>
-
-      <p style="margin-top:12px;">
-        Only anonymous queue information is displayed here.
-        Other patients' names, symptoms, vital signs,
-        medical history and triage scores are not shown.
-      </p>
-
-    </div>
-
-
-    <div
-      class="section-note"
-      style="margin-top:14px;"
-    >
-      Last updated:
-      ${new Date().toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit'
-      })}
     </div>
   `;
 }
