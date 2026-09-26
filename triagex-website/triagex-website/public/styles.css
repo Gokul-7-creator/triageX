@@ -660,6 +660,8 @@ body{overflow-x:hidden;background:
 @media (max-width:640px){.landing{padding:20px 14px 48px}.landing-nav{padding-bottom:28px}.hero-panel{padding:16px}.mini-queue-row{grid-template-columns:20px 1fr auto}.mini-queue-row>span:last-child{display:none}.topbar-sub{max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.auth-card{padding:25px 20px}.kv-grid{grid-template-columns:1fr}.scroll-cue-text{display:none}}
 
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.hero-grid,.hero-mesh,.orb,.hero-pulse-line,.scroll-cue,.auth-shell::before,.auth-shell::after,.factor-bar-fill{animation:none!important}.reveal{opacity:1;transform:none;filter:none}}
+
+
 /* =========================================================
    PATIENT QUEUE DASHBOARD
    ========================================================= */
